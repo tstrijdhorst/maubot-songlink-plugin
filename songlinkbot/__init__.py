@@ -43,6 +43,7 @@ class SongLinkBot(Plugin):
 
         # Send a final response with details and universal link
         await evt.reply(f"🎵 **{title}** - {artist}\n🔗 {page_url}")
+
     @command.passive(r'(https?://open\.spotify\.com/(track|album|artist|playlist|user|episode|show)/[a-zA-Z0-9]+)')
     async def spotify_link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
         spotify_url = match[0]
