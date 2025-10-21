@@ -80,3 +80,21 @@ class SongLinkBot(Plugin):
     async def deezer_link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
         deezer_url = match[0]
         await self._handle_music_url(evt, deezer_url)
+
+    # Amazon Music: match music.amazon.<tld> share links
+    @command.passive(r'(https?://music\.amazon\.[^/\s]+/[^\s]+)')
+    async def amazon_music_link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        amazon_url = match[0]
+        await self._handle_music_url(evt, amazon_url)
+
+    # Napster: match napster.com and app.napster.com links
+    @command.passive(r'(https?://(?:app\.)?napster\.com/[^\s]+)')
+    async def napster_link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        napster_url = match[0]
+        await self._handle_music_url(evt, napster_url)
+
+    # Pandora: match pandora.com links
+    @command.passive(r'(https?://(?:www\.)?pandora\.com/[^\s]+)')
+    async def pandora_link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        pandora_url = match[0]
+        await self._handle_music_url(evt, pandora_url)
