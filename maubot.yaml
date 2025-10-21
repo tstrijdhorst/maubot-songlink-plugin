@@ -1,7 +1,7 @@
 maubot: 0.1.0
-id: com.example.examplebot
+id: com.cyber.songlinkbot
 version: 1.0.0
 license: MIT
 modules:
-  - examplebot
-main_class: ExampleBot
+  - songlinkbot
+main_class: SongLinkBot
