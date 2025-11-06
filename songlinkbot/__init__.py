@@ -14,8 +14,14 @@ class SongLinkBot(Plugin):
             return
 
         data = await response.json()
-        page_url = data.get('pageUrl')
 
+        # If the only platforms are YouTube and YouTube Music, stay silent
+        links_by_platform = data.get('linksByPlatform') or {}
+        platform_keys = set(links_by_platform.keys())
+        if platform_keys and platform_keys.issubset({'youtube', 'youtubeMusic'}):
+            return
+
+        page_url = data.get('pageUrl')
         if not page_url:
             if not silent_on_no_result:
                 await evt.reply("❌ Could not find universal link")
