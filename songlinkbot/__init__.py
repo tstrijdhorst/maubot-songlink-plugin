@@ -1,10 +1,10 @@
-from typing import Tuple
+from typing import Tuple, Optional
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 
 
 class SongLinkBot(Plugin):
-    async def __handle_music_url(self, evt: MessageEvent, url: str, silent_on_no_result: bool = False) -> None:
+    async def __handle_music_url(self, evt: MessageEvent, url: str, input_platform_keys: Optional[set[str]] = None, silent_on_no_result: bool = False) -> None:
         api_url = f"https://api.song.link/v1-alpha.1/links?url={url}"
         response = await self.http.get(api_url)
 
@@ -15,10 +15,10 @@ class SongLinkBot(Plugin):
 
         data = await response.json()
 
-        # If the only platforms are YouTube and YouTube Music, stay silent
+        # If the only result platforms match the input platform(s), stay silent
         links_by_platform = data.get('linksByPlatform') or {}
         platform_keys = set(links_by_platform.keys())
-        if platform_keys and platform_keys.issubset({'youtube', 'youtubeMusic'}):
+        if input_platform_keys and platform_keys and platform_keys.issubset(input_platform_keys):
             return
 
         page_url = data.get('pageUrl')
@@ -45,16 +45,53 @@ class SongLinkBot(Plugin):
 
         await evt.reply(f"🎵 **{title}** - {artist}\n🔗 {page_url}")
 
+    # Use the command regexes themselves to determine the platform of the input URL.
     @command.passive(r'(https?://open\.spotify\.com/(track|album|artist|playlist|user|episode|show)/[a-zA-Z0-9]+)')
-    @command.passive(r'(https?://[a-zA-Z0-9-]+\.bandcamp\.com/(track|album)/[^\s]+)')
-    @command.passive(r'(https?://(?:youtu\.be/[^\s]+|(?:www\.)?(?:music\.)?youtube\.com/watch\?[^\s]+))')
-    @command.passive(r'(https?://(?:m\.)?soundcloud\.com/[^\s]+)')
-    @command.passive(r'(https?://(?:music|itunes)\.apple\.com/[^\s]+)')
-    @command.passive(r'(https?://(?:listen\.)?tidal\.com/(?:browse/)?(?:track|album|playlist|artist)/[^\s]+)')
-    @command.passive(r'(https?://(?:www\.)?deezer\.com/[^\s]+)')
-    @command.passive(r'(https?://music\.amazon\.[^/\s]+/[^\s]+)')
-    @command.passive(r'(https?://(?:app\.)?napster\.com/[^\s]+)')
-    @command.passive(r'(https?://(?:www\.)?pandora\.com/[^\s]+)')
-    async def link_handler(self, evt: MessageEvent, match: Tuple[str]) -> None:
+    async def link_spotify(self, evt: MessageEvent, match: Tuple[str]) -> None:
         url = match[0]
-        await self.__handle_music_url(evt, url)
+        await self.__handle_music_url(evt, url, input_platform_keys={'spotify'})
+
+    @command.passive(r'(https?://[a-zA-Z0-9-]+\.bandcamp\.com/(track|album)/[^\s]+)')
+    async def link_bandcamp(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'bandcamp'})
+
+    @command.passive(r'(https?://(?:youtu\.be/[^\s]+|(?:www\.)?(?:music\.)?youtube\.com/watch\?[^\s]+))')
+    async def link_youtube(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'youtube', 'youtubeMusic'})
+
+    @command.passive(r'(https?://(?:m\.)?soundcloud\.com/[^\s]+)')
+    async def link_soundcloud(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'soundcloud'})
+
+    @command.passive(r'(https?://(?:music|itunes)\.apple\.com/[^\s]+)')
+    async def link_apple(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'appleMusic', 'itunes'})
+
+    @command.passive(r'(https?://(?:listen\.)?tidal\.com/(?:browse/)?(?:track|album|playlist|artist)/[^\s]+)')
+    async def link_tidal(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'tidal'})
+
+    @command.passive(r'(https?://(?:www\.)?deezer\.com/[^\s]+)')
+    async def link_deezer(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'deezer'})
+
+    @command.passive(r'(https?://music\.amazon\.[^/\s]+/[^\s]+)')
+    async def link_amazon(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'amazonMusic', 'amazonStore'})
+
+    @command.passive(r'(https?://(?:app\.)?napster\.com/[^\s]+)')
+    async def link_napster(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'napster'})
+
+    @command.passive(r'(https?://(?:www\.)?pandora\.com/[^\s]+)')
+    async def link_pandora(self, evt: MessageEvent, match: Tuple[str]) -> None:
+        url = match[0]
+        await self.__handle_music_url(evt, url, input_platform_keys={'pandora'})
