@@ -1,4 +1,5 @@
 from typing import Tuple, Optional
+import sys
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 
@@ -9,6 +10,20 @@ class SongLinkBot(Plugin):
         response = await self.http.get(api_url)
 
         if response.status != 200:
+            # Print a helpful debugging message to stderr
+            try:
+                body = await response.text()
+            except Exception as e:
+                body = f"<failed to read body: {e}>"
+            print(
+                (
+                    f"[songlinkbot] Non-200 response from Songlink API: {response.status}\n"
+                    f"Request URL: {api_url}\n"
+                    f"Original input URL: {url}\n"
+                    f"Response body: {body}"
+                ),
+                file=sys.stderr,
+            )
             if not silent_on_no_result:
                 await evt.reply(f"❌ API error: {response.status}")
             return
