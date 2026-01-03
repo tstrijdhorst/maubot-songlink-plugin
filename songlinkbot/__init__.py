@@ -4,7 +4,7 @@ from maubot.handlers import command
 
 
 class SongLinkBot(Plugin):
-    async def __handle_music_url(self, evt: MessageEvent, url: str, input_platform_keys: Optional[set[str]] = None, silent_on_no_result: bool = False) -> None:
+    async def __handle_music_url(self, evt: MessageEvent, url: str, input_platform_keys: Optional[set[str]] = None, silent_on_no_result: bool = True) -> None:
         api_url = f"https://api.song.link/v1-alpha.1/links?url={url}"
         response = await self.http.get(api_url)
 
