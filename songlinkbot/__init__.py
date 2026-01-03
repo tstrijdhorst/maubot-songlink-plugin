@@ -61,7 +61,7 @@ class SongLinkBot(Plugin):
         await evt.reply(f"🎵 **{title}** - {artist}\n🔗 {page_url}")
 
     # Use the command regexes themselves to determine the platform of the input URL.
-    @command.passive(r'(https?://open\.spotify\.com/(track|album|episode|show)/[a-zA-Z0-9]+)')
+    @command.passive(r'(https?://open\.spotify\.com/(track|album)/[a-zA-Z0-9]+)')
     async def link_spotify(self, evt: MessageEvent, match: Tuple[str]) -> None:
         url = match[0]
         await self.__handle_music_url(evt, url, input_platform_keys={'spotify'})
