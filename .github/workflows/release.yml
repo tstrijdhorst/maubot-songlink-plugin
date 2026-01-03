@@ -1,0 +1,87 @@
+name: Release on version tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full history)
+      - uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag looks like semantic version
+        id: verify_tag
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$TAG_NAME' is not a semantic version (vMAJOR.MINOR.PATCH). Skipping." >&2
+            echo "continue=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "continue=true" >> $GITHUB_OUTPUT
+
+      - name: Stop if not a semver tag
+        if: steps.verify_tag.outputs.continue != 'true'
+        run: echo "Non-semver tag — job skipped." && exit 0
+
+      - name: Set VERSION env var from tag
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Create plugin archive (.mbp)
+        run: |
+          set -euo pipefail
+          ARCHIVE="songlink_plugin_${VERSION}.mbp"
+          echo "Creating $ARCHIVE from repository root contents"
+          # Zip all files and folders in repo root, excluding the Git metadata
+          zip -r "$ARCHIVE" . -x ".git/*"
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - name: Determine previous version tag
+        id: prev_tag
+        run: |
+          set -euo pipefail
+          CUR_TAG="$GITHUB_REF_NAME"
+          PREV_TAG=$(git tag --list "v[0-9]*" --sort=version:refname | awk -v cur="$CUR_TAG" '$0==cur{print prev} {prev=$0}')
+          echo "prev=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes from commit messages
+        id: notes
+        run: |
+          set -euo pipefail
+          CUR_TAG="$GITHUB_REF_NAME"
+          PREV_TAG="${{ steps.prev_tag.outputs.prev }}"
+          RANGE=""
+          if [[ -n "$PREV_TAG" ]]; then
+            RANGE="$PREV_TAG..$CUR_TAG"
+          else
+            # No previous tag — use all commits up to this tag
+            RANGE="$CUR_TAG"
+          fi
+          echo "Preparing release notes for range: $RANGE"
+          NOTES=$(git log --no-merges --format='%s' $RANGE || true)
+          if [[ -z "$NOTES" ]]; then
+            NOTES="No commit messages found between $PREV_TAG and $CUR_TAG."
+          fi
+          printf "%s\n" "$NOTES" > NOTES.txt
+          echo "path=NOTES.txt" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and upload asset
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.path }}
+          files: |
+            ${{ env.ARCHIVE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
